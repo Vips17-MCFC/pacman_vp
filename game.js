@@ -34,19 +34,61 @@ const maze = [];
 for (let y = 0; y < GRID_HEIGHT; y++) {
     maze[y] = [];
     for (let x = 0; x < GRID_WIDTH; x++) {
-        // Border walls
-        if (x === 0 || x === GRID_WIDTH - 1 || y === 0 || y === GRID_HEIGHT - 1) {
-            maze[y][x] = 1;
-        } else {
-            // Internal maze structure (simplified)
-            if (x % 2 === 0 && y % 2 === 0) {
-                maze[y][x] = 1;
-            } else {
-                maze[y][x] = 2; // Place dots
+        // Initialize with dots
+        maze[y][x] = 2;
+    }
+}
+
+// Add walls in a Pac-Man style pattern
+function addWall(x, y, width, height) {
+    for (let i = y; i < y + height && i < GRID_HEIGHT; i++) {
+        for (let j = x; j < x + width && j < GRID_WIDTH; j++) {
+            if (i >= 0 && j >= 0) {
+                maze[i][j] = 1;
             }
         }
     }
 }
+
+// Border walls
+for (let i = 0; i < GRID_WIDTH; i++) {
+    maze[0][i] = 1; // Top wall
+    maze[GRID_HEIGHT-1][i] = 1; // Bottom wall
+}
+for (let i = 0; i < GRID_HEIGHT; i++) {
+    maze[i][0] = 1; // Left wall
+    maze[i][GRID_WIDTH-1] = 1; // Right wall
+}
+
+// Add internal walls
+// Top section
+addWall(2, 2, 4, 4);
+addWall(8, 2, 4, 4);
+addWall(14, 2, 4, 4);
+addWall(20, 2, 4, 4);
+addWall(26, 2, 4, 4);
+
+// Middle section
+addWall(2, 8, 4, 4);
+addWall(8, 8, 4, 12);
+addWall(14, 8, 4, 4);
+addWall(20, 8, 4, 12);
+addWall(26, 8, 4, 4);
+
+// Bottom section
+addWall(2, 22, 4, 4);
+addWall(8, 22, 4, 4);
+addWall(14, 22, 4, 4);
+addWall(20, 22, 4, 4);
+addWall(26, 22, 4, 4);
+
+// Add T-shaped walls
+addWall(14, 14, 4, 2);
+addWall(13, 14, 6, 2);
+
+// Clear starting positions
+maze[23][14] = 2; // Pacman starting position
+maze[11][14] = 0; // Ghost starting position
 
 // Game controls
 document.addEventListener('keydown', (e) => {
@@ -83,18 +125,52 @@ function checkCollision(x, y) {
 
 // Move ghost
 function moveGhost() {
-    // Simple ghost AI: move randomly
-    if (Math.random() < 0.05) {
-        ghost.direction = Math.floor(Math.random() * 4) * (Math.PI / 2);
+    // Calculate direction to Pac-Man
+    const dx = pacman.x - ghost.x;
+    const dy = pacman.y - ghost.y;
+    const angle = Math.atan2(dy, dx);
+    
+    // Try to move towards Pac-Man
+    let newX = ghost.x;
+    let newY = ghost.y;
+    let moved = false;
+    
+    // Try primary direction (horizontal or vertical based on distance)
+    if (Math.abs(dx) > Math.abs(dy)) {
+        // Try horizontal movement
+        newX = ghost.x + Math.sign(dx) * ghost.speed;
+        if (!checkCollision(newX, ghost.y)) {
+            ghost.x = newX;
+            moved = true;
+        }
+    } else {
+        // Try vertical movement
+        newY = ghost.y + Math.sign(dy) * ghost.speed;
+        if (!checkCollision(ghost.x, newY)) {
+            ghost.y = newY;
+            moved = true;
+        }
     }
-
-    const newX = ghost.x + Math.cos(ghost.direction) * ghost.speed;
-    const newY = ghost.y + Math.sin(ghost.direction) * ghost.speed;
-
-    if (!checkCollision(newX, newY)) {
-        ghost.x = newX;
-        ghost.y = newY;
+    
+    // If primary direction failed, try the other direction
+    if (!moved) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Try vertical movement
+            newY = ghost.y + Math.sign(dy) * ghost.speed;
+            if (!checkCollision(ghost.x, newY)) {
+                ghost.y = newY;
+            }
+        } else {
+            // Try horizontal movement
+            newX = ghost.x + Math.sign(dx) * ghost.speed;
+            if (!checkCollision(newX, ghost.y)) {
+                ghost.x = newX;
+            }
+        }
     }
+    
+    // Update ghost direction for eye animation
+    ghost.direction = angle;
 }
 
 // Draw functions
